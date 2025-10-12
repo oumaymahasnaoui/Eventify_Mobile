@@ -10,6 +10,9 @@ class User {
   final String? location;
   final bool isActive;
   final DateTime? lastLogin;
+  final bool isVerified;
+  final String? verificationToken;
+  final DateTime? verificationSentAt;
 
   User({
     this.id,
@@ -23,6 +26,9 @@ class User {
     this.location,
     this.isActive = true,
     this.lastLogin,
+    this.isVerified = false,
+    this.verificationToken,
+    this.verificationSentAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -38,6 +44,9 @@ class User {
       'location': location,
       'isActive': isActive ? 1 : 0,
       'lastLogin': lastLogin?.toIso8601String(),
+      'isVerified': isVerified ? 1 : 0,
+      'verificationToken': verificationToken,
+      'verificationSentAt': verificationSentAt?.toIso8601String(),
     };
   }
 
@@ -54,17 +63,21 @@ class User {
       location: map['location'],
       isActive: map['isActive'] == 1,
       lastLogin: map['lastLogin'] != null ? DateTime.parse(map['lastLogin']) : null,
+      isVerified: map['isVerified'] == 1,
+      verificationToken: map['verificationToken'],
+      verificationSentAt: map['verificationSentAt'] != null
+          ? DateTime.parse(map['verificationSentAt'])
+          : null,
     );
   }
 
-  // Méthode pour afficher l'âge
+  // Getters
   int? get age {
     if (birthDate == null) return null;
     final now = DateTime.now();
     return now.year - birthDate!.year - (now.isBefore(DateTime(now.year, birthDate!.month, birthDate!.day)) ? 1 : 0);
   }
 
-  // Méthode pour la durée depuis l'inscription
   String get membershipDuration {
     final now = DateTime.now();
     final difference = now.difference(joinDate);
@@ -78,5 +91,38 @@ class User {
     } else {
       return '${difference.inDays} jour${difference.inDays > 1 ? 's' : ''}';
     }
+  }
+
+  // Méthodes de vérification
+  User generateVerificationToken() {
+    final token = _generateRandomToken();
+    return User(
+      id: id,
+      name: name,
+      email: email,
+      phone: phone,
+      password: password,
+      joinDate: joinDate,
+      birthDate: birthDate,
+      bio: bio,
+      location: location,
+      isActive: isActive,
+      lastLogin: lastLogin,
+      isVerified: isVerified,
+      verificationToken: token,
+      verificationSentAt: DateTime.now(),
+    );
+  }
+
+  String _generateRandomToken() {
+    final random = DateTime.now().millisecondsSinceEpoch.toString();
+    return 'token_${random.substring(random.length - 8)}';
+  }
+
+  bool isVerificationTokenValid() {
+    if (verificationSentAt == null) return false;
+    final now = DateTime.now();
+    final difference = now.difference(verificationSentAt!);
+    return difference.inHours <= 24;
   }
 }

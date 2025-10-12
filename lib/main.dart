@@ -1,14 +1,22 @@
-import 'package:flutter/material.dart';
-import 'database/database_helper.dart';
-import 'modules/auth/pages/signup_page.dart';
 
+import 'package:flutter/material.dart';
+import 'package:eventify/database/database_helper.dart';
+import 'package:eventify/modules/auth/pages/signup_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Réinitialiser la base pour corriger le schéma
   final dbHelper = DatabaseHelper();
+  await dbHelper.createPasswordResetsTable();
 
+  // 1. Afficher les infos actuelles
+  await dbHelper.debugDatabaseInfo();
 
+  // 2. Tester le système de hashage
+  await dbHelper.testHashSystem();
+
+  // 3. Forcer la migration si nécessaire
+  await dbHelper.forcePasswordHashingMigration();
   // Afficher les infos de debug
   await dbHelper.getDatabasePath();
   await dbHelper.debugTableSchema();

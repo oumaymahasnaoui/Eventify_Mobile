@@ -36,7 +36,9 @@ dependencies:
   social_auth_buttons: ^2.0.2
   cupertino_icons: ^1.0.8
   path_provider: ^2.1.1  # Ajoutez cette ligne
-
+  http: ^1.1.0
+  crypto: ^3.0.3
+  image_picker: ^1.0.4
 
   # The following adds the Cupertino Icons font to your application.
 
