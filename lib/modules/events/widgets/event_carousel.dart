@@ -215,6 +215,7 @@ class EventCarousel extends StatelessWidget {
     );
   }
 
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }

@@ -27,6 +27,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   final UserService _userService = UserService();
   final AuthService _authService = AuthService();
 
+  late Event _event;
   List<User> _participants = [];
   bool _isLoading = true;
   User? _creator;
@@ -37,16 +38,17 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   @override
   void initState() {
     super.initState();
+    _event = widget.event;
     _loadData();
   }
 
   Future<void> _loadData() async {
     try {
       // Charger les participants
-      final participants = await _userService.getUsersByIds(widget.event.participants);
+      final participants = await _userService.getUsersByIds(_event.participants);
 
       // Trouver le créateur
-      final creator = await _userService.getUser(widget.event.createdBy);
+      final creator = await _userService.getUser(_event.createdBy);
 
       setState(() {
         _participants = participants;
@@ -61,10 +63,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
-  bool get _isCreator => widget.event.createdBy == widget.currentUserId;
-  bool get _isParticipating => widget.event.participants.contains(widget.currentUserId);
-  bool get _canJoin => !_isCreator && !_isParticipating && widget.event.date.isAfter(DateTime.now());
-  bool get _canLeave => !_isCreator && _isParticipating && widget.event.date.isAfter(DateTime.now());
+  bool get _isCreator => _event.createdBy == widget.currentUserId;
+  bool get _isParticipating => _event.participants.contains(widget.currentUserId);
+  bool get _canJoin => !_isCreator && !_isParticipating && _event.date.isAfter(DateTime.now());
+  bool get _canLeave => !_isCreator && _isParticipating && _event.date.isAfter(DateTime.now());
 
   @override
   Widget build(BuildContext context) {
@@ -126,10 +128,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return Row(
       children: [
         CircleAvatar(
-          backgroundColor: _getCategoryColor(widget.event.category),
+          backgroundColor: _getCategoryColor(_event.category),
           radius: 30,
           child: Text(
-            EventCategories.categoryIcons[widget.event.category] ?? '📅',
+            EventCategories.categoryIcons[_event.category] ?? '📅',
             style: TextStyle(fontSize: 24),
           ),
         ),
@@ -139,7 +141,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.event.title,
+                _event.title,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -147,7 +149,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ),
               SizedBox(height: 4),
               Text(
-                widget.event.category,
+                _event.category,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -167,15 +169,20 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         child: Column(
           children: [
             _buildInfoRow(Icons.calendar_today, 'Date',
-                '${_formatDate(widget.event.date)}'),
+                '${_formatDate(_event.date)}'),
             SizedBox(height: 12),
-            _buildInfoRow(Icons.location_on, 'Lieu', widget.event.location),
+            _buildInfoRow(Icons.location_on, 'Lieu', _event.location),
             SizedBox(height: 12),
             _buildInfoRow(Icons.person, 'Créé par',
                 _creator?.name ?? 'Utilisateur inconnu'),
             SizedBox(height: 12),
             _buildInfoRow(Icons.people, 'Participants',
                 '${_participants.length} personne(s)'),
+            if (_event.maxParticipants > 0) ...[
+              SizedBox(height: 12),
+              _buildInfoRow(Icons.group, 'Limite participants',
+                  '${_participants.length}/${_event.maxParticipants}'),
+            ],
           ],
         ),
       ),
@@ -227,7 +234,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           child: Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              widget.event.description,
+              _event.description,
               style: TextStyle(fontSize: 16, height: 1.4),
             ),
           ),
@@ -311,148 +318,163 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   }
 
   Widget _buildActionButtons() {
-    if (_isCreator) {
-      return _buildCreatorActions();
-    } else if (_isParticipating) {
-      return _buildParticipantActions();
-    } else if (_canJoin) {
-      return _buildJoinButton();
-    } else {
-      return _buildDisabledState();
+    // Si l'événement est complet et l'utilisateur ne participe pas
+    if (_event.isFull && !_isParticipating) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error, color: Colors.red),
+            SizedBox(width: 8),
+            Text(
+              'Événement complet',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
     }
-  }
 
-  Widget _buildCreatorActions() {
-    return Column(
-      children: [
-        Text(
-          '👑 Vous êtes le créateur de cet événement',
-          style: TextStyle(
-            color: Colors.orange,
-            fontWeight: FontWeight.bold,
-          ),
+    // Si l'utilisateur participe déjà
+    if (_isParticipating) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green[50],
+          border: Border.all(color: Colors.green),
+          borderRadius: BorderRadius.circular(8),
         ),
-        SizedBox(height: 16),
-        Row(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: Icon(Icons.share),
-                label: Text('Partager'),
-                onPressed: _shareEvent,
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
+            Icon(Icons.check_circle, color: Colors.green, size: 24),
             SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                icon: Icon(Icons.edit),
-                label: Text('Modifier'),
-                onPressed: _navigateToEdit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                ),
+            Text(
+              'Vous participez à cet événement',
+              style: TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
           ],
         ),
-      ],
-    );
-  }
+      );
+    }
 
-  Widget _buildParticipantActions() {
-    return Column(
-      children: [
-        Text(
-          '✅ Vous participez à cet événement',
-          style: TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
+    // Si c'est le créateur
+    if (_isCreator) {
+      return Column(
+        children: [
+          Text(
+            '👑 Vous êtes le créateur de cet événement',
+            style: TextStyle(
+              color: Colors.orange,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: Icon(Icons.share),
+                  label: Text('Partager'),
+                  onPressed: _shareEvent,
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.edit),
+                  label: Text('Modifier'),
+                  onPressed: _navigateToEdit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Si l'événement est passé
+    if (_event.date.isBefore(DateTime.now())) {
+      return Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Text(
+            'Événement terminé',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: Icon(Icons.share),
-                label: Text('Partager'),
-                onPressed: _shareEvent,
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: Colors.grey),
-                  foregroundColor: Colors.grey[700],
-                ),
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                icon: _isLeaving
-                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(Icons.exit_to_app),
-                label: Text(_isLeaving ? 'Retrait...' : 'Se retirer'),
-                onPressed: _isLeaving ? null : _confirmLeave,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  disabledBackgroundColor: Colors.grey[400],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+      );
+    }
 
-  Widget _buildJoinButton() {
+    // Bouton "Participer" normal
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton.icon(
+      child: ElevatedButton(
         onPressed: _isJoining ? null : _joinEvent,
-        icon: _isJoining
-            ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-            : Icon(Icons.person_add),
-        label: Text(_isJoining ? 'Rejoindre...' : 'Rejoindre cet événement'),
         style: ElevatedButton.styleFrom(
           backgroundColor: Color(0xFFCE1126),
           foregroundColor: Colors.white,
           padding: EdgeInsets.symmetric(vertical: 16),
-          disabledBackgroundColor: Colors.grey[400],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDisabledState() {
-    String message = '';
-    if (_isCreator) {
-      message = 'Vous êtes le créateur';
-    } else if (widget.event.date.isBefore(DateTime.now())) {
-      message = 'Événement terminé';
-    } else if (_isParticipating) {
-      message = 'Vous participez déjà';
-    }
-
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          message,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontWeight: FontWeight.bold,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
+        ),
+        child: _isJoining
+            ? Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Rejoindre...'),
+          ],
+        )
+            : Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_add),
+            SizedBox(width: 8),
+            Text(
+              'Participer',
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
         ),
       ),
     );
@@ -480,7 +502,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 ),
                 title: Text(user.name),
                 subtitle: Text(user.email),
-                trailing: user.id == widget.event.createdBy
+                trailing: user.id == _event.createdBy
                     ? Chip(
                   label: Text('Créateur', style: TextStyle(fontSize: 10)),
                   backgroundColor: Colors.orange[100],
@@ -511,9 +533,17 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     });
 
     try {
-      await _eventService.addParticipant(widget.event.id, widget.currentUserId);
+      await _eventService.addParticipant(_event.id, widget.currentUserId);
 
       // Recharger les données
+      final updatedEvents = await _eventService.getEvents();
+      final updatedEvent = updatedEvents.firstWhere((e) => e.id == _event.id);
+
+      setState(() {
+        _event = updatedEvent;
+        _isJoining = false;
+      });
+
       await _loadData();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -529,7 +559,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
       setState(() {
         _isJoining = false;
       });
@@ -542,9 +571,17 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     });
 
     try {
-      await _eventService.removeParticipant(widget.event.id, widget.currentUserId);
+      await _eventService.removeParticipant(_event.id, widget.currentUserId);
 
       // Recharger les données
+      final updatedEvents = await _eventService.getEvents();
+      final updatedEvent = updatedEvents.firstWhere((e) => e.id == _event.id);
+
+      setState(() {
+        _event = updatedEvent;
+        _isLeaving = false;
+      });
+
       await _loadData();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -560,7 +597,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
       setState(() {
         _isLeaving = false;
       });
@@ -572,7 +608,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Se retirer de l\'événement'),
-        content: Text('Êtes-vous sûr de vouloir vous retirer de "${widget.event.title}" ?'),
+        content: Text('Êtes-vous sûr de vouloir vous retirer de "${_event.title}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -605,7 +641,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       context,
       MaterialPageRoute(
         builder: (context) => EditEventPage(
-          event: widget.event,
+          event: _event,
           currentUserId: widget.currentUserId,
         ),
       ),
@@ -621,7 +657,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Supprimer l\'événement'),
-        content: Text('Êtes-vous sûr de vouloir supprimer "${widget.event.title}" ? Cette action est irréversible.'),
+        content: Text('Êtes-vous sûr de vouloir supprimer "${_event.title}" ? Cette action est irréversible.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -638,7 +674,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   Future<void> _deleteEvent() async {
     try {
-      await _eventService.deleteEvent(widget.event.id);
+      await _eventService.deleteEvent(_event.id);
       Navigator.pop(context); // Fermer la dialog
       Navigator.pop(context, true); // Retour à la liste avec rafraîchissement
       ScaffoldMessenger.of(context).showSnackBar(
