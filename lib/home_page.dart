@@ -4,7 +4,7 @@ import 'modules/auth/pages/profile_page.dart';
 import 'modules/events/pages/events_home_page.dart'; // Import ajouté
 
 class HomePage extends StatelessWidget {
-  final User user; // Déclaration correcte de la variable user
+  final User user;
 
   const HomePage({super.key, required this.user}); // Correction du constructeur
 
@@ -30,7 +30,7 @@ class HomePage extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
+                MaterialPageRoute(builder: (context) => ProfilePage(user: user)),
               );
             },
           ),
@@ -43,7 +43,7 @@ class HomePage extends StatelessWidget {
           children: [ // SUPPRIMER le const ici
             const _WelcomeSection(),
             const SizedBox(height: 24),
-            const _QuickActionsSection(),
+            _QuickActionsSection(user: user),
             const SizedBox(height: 24),
             const _RecentEventsSection(),
           ],
@@ -108,7 +108,8 @@ class _WelcomeSection extends StatelessWidget {
 }
 
 class _QuickActionsSection extends StatelessWidget {
-  const _QuickActionsSection();
+  final User user;
+  const _QuickActionsSection({required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +140,7 @@ class _QuickActionsSection extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => EventsHomePage(currentUserId: 1), // À remplacer par user.id! plus tard
+                    builder: (context) => EventsHomePage(currentUserId: user.id!), // ✅ CORRIGÉ // À remplacer par user.id! plus tard
                   ),
                 );
               },

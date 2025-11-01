@@ -8,6 +8,7 @@ void main() async {
   // Réinitialiser la base pour corriger le schéma
   final dbHelper = DatabaseHelper();
 
+
   // Afficher les infos de debug
   await dbHelper.getDatabasePath();
   await dbHelper.debugTableSchema();

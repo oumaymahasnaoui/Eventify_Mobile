@@ -23,6 +23,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _maxParticipantsController = TextEditingController(text: '0');
 
   String _selectedCategory = EventCategories.categories.first;
   DateTime _selectedDate = DateTime.now();
@@ -129,6 +130,29 @@ class _CreateEventPageState extends State<CreateEventPage> {
                   return null;
                 },
               ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _maxParticipantsController,
+                decoration: InputDecoration(
+                  labelText: 'Nombre maximum de participants (0 = illimité)',
+                  border: OutlineInputBorder(),
+                  helperText: 'Laissez 0 pour un nombre illimité de participants',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un nombre';
+                  }
+                  final number = int.tryParse(value);
+                  if (number == null || number < 0) {
+                    return 'Veuillez entrer un nombre positif';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+
+
             ],
           ),
         ),
@@ -153,6 +177,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
   Future<void> _saveEvent() async {
     if (_formKey.currentState!.validate()) {
+      print("🔍 DEBUG - Création événement par user ID: ${widget.currentUserId}"); // AJOUTEZ CE LOG
       final newEvent = Event.createNew(
         title: _titleController.text,
         date: _selectedDate,
@@ -162,6 +187,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         latitude: _latitude,
         longitude: _longitude,
         createdBy: widget.currentUserId, // MAINTENANT int
+        maxParticipants: int.parse(_maxParticipantsController.text)
       );
 
       try {

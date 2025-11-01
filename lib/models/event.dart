@@ -11,6 +11,8 @@ class Event {
   final List<int> participants;
   final int createdBy;
   final DateTime createdAt; // 11 champs au total
+  final int maxParticipants; // NOUVEAU CHAMP
+
 
   Event({
     required this.id,
@@ -24,6 +26,7 @@ class Event {
     required this.participants,
     required this.createdBy,
     required this.createdAt,
+    required this.maxParticipants, // AJOUTÉ
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +42,7 @@ class Event {
       'participants': participants.join(','), // Convertir la liste en string
       'createdBy': createdBy,
       'createdAt': createdAt.toIso8601String(),
+      'maxParticipants': maxParticipants, // AJOUTÉ
     };
   }
 
@@ -55,6 +59,7 @@ class Event {
       participants: (map['participants'] as String).split(',').where((e) => e.isNotEmpty).map(int.parse).toList(),
       createdBy: map['createdBy'],
       createdAt: DateTime.parse(map['createdAt']),
+      maxParticipants: map['maxParticipants'] ?? 0,
     );
   }
 
@@ -68,6 +73,7 @@ class Event {
     double? latitude,
     double? longitude,
     required int createdBy,
+    required int maxParticipants,
   }) {
     return Event(
       id: 0, // Sera auto-incrémenté par la base
@@ -81,6 +87,17 @@ class Event {
       participants: [createdBy], // Le créateur est automatiquement participant
       createdBy: createdBy,
       createdAt: DateTime.now(),
+      maxParticipants: maxParticipants,
     );
+
+  }
+  // Méthode utilitaire pour vérifier si l'événement est complet
+  bool get isFull {
+    return maxParticipants > 0 && participants.length >= maxParticipants;
+  }
+
+  // Vérifie si un utilisateur peut participer
+  bool canParticipate(int userId) {
+    return !isFull && !participants.contains(userId);
   }
 }

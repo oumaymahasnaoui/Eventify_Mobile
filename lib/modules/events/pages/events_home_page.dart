@@ -26,6 +26,8 @@ class _EventsHomePageState extends State<EventsHomePage> {
   @override
   void initState() {
     super.initState();
+    print("🔍 DEBUG - Current User ID reçu: ${widget.currentUserId}"); // AJOUTEZ CE LOG
+
     _loadEvents();
   }
 

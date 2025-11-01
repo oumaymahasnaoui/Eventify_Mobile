@@ -32,7 +32,10 @@ class EventService {
   Future<void> addParticipant(int eventId, int userId) async {
     final events = await _databaseHelper.getEvents();
     final event = events.firstWhere((e) => e.id == eventId);
-
+    // VÉRIFICATION DE LA LIMITE - AJOUT IMPORTANT
+    if (event.maxParticipants > 0 && event.participants.length >= event.maxParticipants) {
+      throw Exception('L\'événement a atteint le nombre maximum de participants');
+    }
     if (!event.participants.contains(userId)) {
       final updatedParticipants = List<int>.from(event.participants)..add(userId);
       final updatedEvent = Event(
@@ -47,6 +50,8 @@ class EventService {
         participants: updatedParticipants,
         createdBy: event.createdBy,
         createdAt: event.createdAt,
+        maxParticipants:event.maxParticipants,
+
       );
 
       await _databaseHelper.updateEvent(updatedEvent);
@@ -77,6 +82,7 @@ class EventService {
         participants: updatedParticipants,
         createdBy: event.createdBy,
         createdAt: event.createdAt,
+        maxParticipants:event.maxParticipants,
       );
 
       await _databaseHelper.updateEvent(updatedEvent);

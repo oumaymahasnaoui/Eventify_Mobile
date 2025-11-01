@@ -27,7 +27,22 @@ class DatabaseHelper {
       path,
       version: 2, // Version augmentée
       onCreate: _createTables,
+      onUpgrade: _onUpgrade,
     );
+  }
+  // AJOUTEZ cette méthode dans DatabaseHelper
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    developer.log('🔄 Upgrading database from $oldVersion to $newVersion');
+
+    if (oldVersion < 2) {
+      // Ajouter la colonne maxParticipants si elle n'existe pas
+      try {
+        await db.execute('ALTER TABLE events ADD COLUMN maxParticipants INTEGER DEFAULT 0');
+        developer.log('✅ Added maxParticipants column to events table');
+      } catch (e) {
+        developer.log('ℹ️ Column maxParticipants might already exist: $e');
+      }
+    }
   }
 
   Future<void> _createTables(Database db, int version) async {
@@ -66,6 +81,7 @@ class DatabaseHelper {
         participants TEXT NOT NULL,
         createdBy INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
+         maxParticipants INTEGER DEFAULT 0,
         FOREIGN KEY (createdBy) REFERENCES users(id)
       )
     ''');
@@ -196,6 +212,7 @@ class DatabaseHelper {
         'participants': event.participants.join(','),
         'createdBy': event.createdBy,
         'createdAt': event.createdAt.toIso8601String(),
+        'maxParticipants': event.maxParticipants,
       });
 
       developer.log('✅ Event inserted successfully with id: $result');
@@ -309,12 +326,19 @@ class DatabaseHelper {
     }
   }
 
+
   Future<void> debugAllUsers() async {
-    final db = await database;
-    final users = await db.query('users');
-    print('👥 UTILISATEURS DANS LA BASE:');
-    for (final user in users) {
-      print('  $user');
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> users = await db.query('users');
+
+      print('🔍 DEBUG - TOUS LES UTILISATEURS DANS LA BASE:');
+      for (var user in users) {
+        print('   ID: ${user['id']}, Nom: ${user['name']}, Email: ${user['email']}');
+      }
+      print('📊 Total: ${users.length} utilisateurs');
+    } catch (e) {
+      print('❌ Erreur debugAllUsers: $e');
     }
   }
 

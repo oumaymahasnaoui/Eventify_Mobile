@@ -69,6 +69,7 @@ class EventCarousel extends StatelessWidget {
   Widget _buildEventCard(Event event, BuildContext context) {
     final isParticipating = event.participants.contains(currentUserId);
     final isCreator = event.createdBy == currentUserId;
+    final isFull = event.isFull;
 
     return Container(
       width: 280,
@@ -99,26 +100,31 @@ class EventCarousel extends StatelessWidget {
                       ),
                     ),
                     // Indicateur de participation
-                    if (isParticipating)
-                      Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: Icon(Icons.check_circle, size: 16, color: Colors.green),
-                      ),
-                    if (isCreator)
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert, size: 18),
-                        onSelected: (value) {
-                          if (value == 'edit') onEditEvent(event);
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                        ],
-                      ),
-                  ],
-                ),
-                SizedBox(height: 8),
+            if (isFull)
+          Padding(
+      padding: EdgeInsets.only(right: 8),
+      child: Icon(Icons.error, size: 16, color: Colors.red),
+    ),
+    if (isParticipating)
+    Padding(
+    padding: EdgeInsets.only(right: 8),
+    child: Icon(Icons.check_circle, size: 16, color: Colors.green),
+    ),
+    if (isCreator)
+    PopupMenuButton<String>(
+    icon: Icon(Icons.more_vert, size: 18),
+    onSelected: (value) {
+    if (value == 'edit') onEditEvent(event);
+    },
+    itemBuilder: (context) => [
+    PopupMenuItem(value: 'edit', child: Text('Modifier')),
+    ],
+    ),
+    ],
+    ),
+    SizedBox(height: 8),
 
-                // Date
+    // Date
                 Row(
                   children: [
                     Icon(Icons.calendar_today, size: 14, color: Colors.grey),

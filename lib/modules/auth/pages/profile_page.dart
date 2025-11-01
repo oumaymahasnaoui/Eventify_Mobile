@@ -1,7 +1,8 @@
+import 'package:eventify/models/user.dart';
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({super.key, required User user});
 
   // Simulation des données utilisateur
   Future<Map<String, dynamic>> _getUserData() async {
