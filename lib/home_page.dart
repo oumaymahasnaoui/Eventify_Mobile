@@ -1,9 +1,12 @@
 import 'package:eventify/models/user.dart';
 import 'package:flutter/material.dart';
 import 'modules/auth/pages/profile_page.dart';
+import 'modules/events/pages/events_home_page.dart'; // Import ajouté
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required User user});
+  final User user; // Déclaration correcte de la variable user
+
+  const HomePage({super.key, required this.user}); // Correction du constructeur
 
   @override
   Widget build(BuildContext context) {
@@ -33,22 +36,28 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: SingleChildScrollView( // SUPPRIMER le const ici
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _WelcomeSection(),
-            SizedBox(height: 24),
-            _QuickActionsSection(),
-            SizedBox(height: 24),
-            _RecentEventsSection(),
+          children: [ // SUPPRIMER le const ici
+            const _WelcomeSection(),
+            const SizedBox(height: 24),
+            const _QuickActionsSection(),
+            const SizedBox(height: 24),
+            const _RecentEventsSection(),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Create new event
+          // Navigation vers EventsHomePage avec l'user ID
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EventsHomePage(currentUserId: user.id!),
+            ),
+          );
         },
         backgroundColor: const Color(0xFFCE1126),
         child: const Icon(Icons.add, color: Colors.white),
@@ -122,28 +131,42 @@ class _QuickActionsSection extends StatelessWidget {
           mainAxisSpacing: 12,
           children: [
             _buildActionCard(
-              icon: Icons.add_circle_outline,
-              title: 'Créer un événement',
+              icon: Icons.event,
+              title: 'Liste des événements',
               color: const Color(0xFFCE1126),
-              onTap: () {},
+              onTap: () {
+                // Navigation vers EventsHomePage
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EventsHomePage(currentUserId: 1), // À remplacer par user.id! plus tard
+                  ),
+                );
+              },
             ),
             _buildActionCard(
               icon: Icons.group,
               title: 'Mes groupes',
               color: Colors.blue,
-              onTap: () {},
+              onTap: () {
+                // TODO: Navigation vers groupes
+              },
             ),
             _buildActionCard(
               icon: Icons.photo_album,
               title: 'Albums photos',
               color: Colors.green,
-              onTap: () {},
+              onTap: () {
+                // TODO: Navigation vers albums
+              },
             ),
             _buildActionCard(
               icon: Icons.attach_money,
               title: 'Dépenses',
               color: Colors.orange,
-              onTap: () {},
+              onTap: () {
+                // TODO: Navigation vers dépenses
+              },
             ),
           ],
         ),
@@ -151,7 +174,7 @@ class _QuickActionsSection extends StatelessWidget {
     );
   }
 
-  static Widget _buildActionCard({
+  Widget _buildActionCard({
     required IconData icon,
     required String title,
     required Color color,
