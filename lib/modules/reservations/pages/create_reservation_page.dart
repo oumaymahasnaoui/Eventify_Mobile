@@ -53,10 +53,12 @@ class _CreateReservationPageState extends State<CreateReservationPage> {
       final totalAmount = widget.event.price * numberOfPeople;
 
       // 1. Traiter le paiement avec Stripe
-      bool paymentSuccess = await _stripeService.payReservation(
+      bool paymentSuccess = await _stripeService.makePayment(
         context: context,
-        totalAmount: totalAmount,
+        amount: totalAmount,
+        currency: 'eur',
       );
+
 
       if (!paymentSuccess) {
         // Le paiement a échoué ou été annulé
