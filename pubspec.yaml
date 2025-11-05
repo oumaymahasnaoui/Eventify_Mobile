@@ -35,7 +35,9 @@ dependencies:
   path: ^1.8.3
   social_auth_buttons: ^2.0.2
   cupertino_icons: ^1.0.8
-  path_provider: ^2.1.1  # Ajoutez cette ligne
+  path_provider: ^2.1.1
+  flutter_stripe: ^11.5.0
+  http: ^1.1.0
 
 
   # The following adds the Cupertino Icons font to your application.

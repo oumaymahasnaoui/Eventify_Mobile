@@ -1,9 +1,16 @@
 import 'package:eventify/models/user.dart';
 import 'package:flutter/material.dart';
 import 'modules/auth/pages/profile_page.dart';
+import 'modules/reservations/pages/my_reservations_page.dart';
+import 'modules/reservations/pages/event_list_page.dart';
+import 'modules/reservations/pages/reservation_statistics_page.dart';
+import 'debug/database_management_page.dart';
+import 'modules/debug/database_debug_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required User user});
+  final User user;
+  
+  const HomePage({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -14,6 +21,29 @@ class HomePage extends StatelessWidget {
         backgroundColor: const Color(0xFFCE1126),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            tooltip: 'Debug BDD',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DatabaseDebugPage(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DatabaseManagementPage(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const CircleAvatar(
               radius: 18,
@@ -33,16 +63,16 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _WelcomeSection(),
-            SizedBox(height: 24),
-            _QuickActionsSection(),
-            SizedBox(height: 24),
-            _RecentEventsSection(),
+            const _WelcomeSection(),
+            const SizedBox(height: 24),
+            _QuickActionsSection(userId: user.id!),
+            const SizedBox(height: 24),
+            const _RecentEventsSection(),
           ],
         ),
       ),
@@ -99,7 +129,9 @@ class _WelcomeSection extends StatelessWidget {
 }
 
 class _QuickActionsSection extends StatelessWidget {
-  const _QuickActionsSection();
+  final int userId;
+  
+  const _QuickActionsSection({required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -122,27 +154,48 @@ class _QuickActionsSection extends StatelessWidget {
           mainAxisSpacing: 12,
           children: [
             _buildActionCard(
-              icon: Icons.add_circle_outline,
-              title: 'Créer un événement',
+              icon: Icons.event_available,
+              title: 'Réserver un événement',
               color: const Color(0xFFCE1126),
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EventListPage(userId: userId),
+                  ),
+                );
+              },
+            ),
+            _buildActionCard(
+              icon: Icons.bookmark,
+              title: 'Mes réservations',
+              color: Colors.purple,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyReservationsPage(userId: userId),
+                  ),
+                );
+              },
+            ),
+            _buildActionCard(
+              icon: Icons.bar_chart,
+              title: 'Statistiques',
+              color: Colors.orange,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReservationStatisticsPage(userId: userId),
+                  ),
+                );
+              },
             ),
             _buildActionCard(
               icon: Icons.group,
               title: 'Mes groupes',
               color: Colors.blue,
-              onTap: () {},
-            ),
-            _buildActionCard(
-              icon: Icons.photo_album,
-              title: 'Albums photos',
-              color: Colors.green,
-              onTap: () {},
-            ),
-            _buildActionCard(
-              icon: Icons.attach_money,
-              title: 'Dépenses',
-              color: Colors.orange,
               onTap: () {},
             ),
           ],

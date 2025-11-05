@@ -43,6 +43,40 @@ class _DatabaseViewerState extends State<DatabaseViewer> {
     }
   }
 
+  Future<void> _resetDatabase() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Réinitialiser la base de données'),
+        content: const Text('Cette action supprimera toutes les données. Continuer ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Réinitialiser'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _dbHelper.resetDatabase();
+      _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Base de données réinitialisée'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _addTestUser() async {
     final testUser = User(
       name: 'Test User ${DateTime.now().millisecond}',
@@ -146,6 +180,14 @@ class _DatabaseViewerState extends State<DatabaseViewer> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          FloatingActionButton(
+            heroTag: 'reset',
+            onPressed: _resetDatabase,
+            backgroundColor: Colors.red,
+            mini: true,
+            child: const Icon(Icons.delete_forever),
+          ),
+          const SizedBox(height: 10),
           FloatingActionButton(
             heroTag: 'refresh',
             onPressed: _loadData,

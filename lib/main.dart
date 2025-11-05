@@ -1,38 +1,39 @@
 import 'package:flutter/material.dart';
 import 'database/database_helper.dart';
 import 'modules/auth/pages/signup_page.dart';
+import 'services/stripe_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Réinitialiser la base pour corriger le schéma
+  // Initialiser Stripe
+  await StripeService.init();
+
+  // Initialiser la base de données
   final dbHelper = DatabaseHelper();
-
-
-  // Afficher les infos de debug
   await dbHelper.getDatabasePath();
   await dbHelper.debugTableSchema();
   await dbHelper.debugAllUsers();
-  runApp(MyApp());
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Eventify',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: Color(0xFFCE1126),
+        primaryColor: const Color(0xFFCE1126),
         colorScheme: ColorScheme.fromSwatch().copyWith(
-          primary: Color(0xFFCE1126),
-          secondary: Color(0xFFCE1126),
+          primary: const Color(0xFFCE1126),
+          secondary: const Color(0xFFCE1126),
         ),
       ),
-      home: SignUpPage(), // ou votre page d'accueil
+      home: const SignUpPage(), // ou votre page d'accueil
     );
   }
-  final dbHelper = DatabaseHelper();
-
-  // Afficher les infos de debug
-
 }

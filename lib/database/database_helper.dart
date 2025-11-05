@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
 import '../models/user.dart';
+import '../models/reservation.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -24,8 +25,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Incrémenté pour la nouvelle table
       onCreate: _createTables,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -50,6 +52,21 @@ class DatabaseHelper {
 
     developer.log('✅ Table users created successfully');
 
+    await db.execute('''
+    CREATE TABLE reservations(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      reservation_date TEXT NOT NULL,
+      number_of_people INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      notes TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  ''');
+
+    developer.log('✅ Table reservations created successfully');
+
     // Insérer un utilisateur de test
     await db.insert('users', {
       'name': 'Oumayma Ben Ahmed',
@@ -65,6 +82,26 @@ class DatabaseHelper {
 
 
     developer.log('👤 Test user inserted');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    developer.log('🔄 Upgrading database from v$oldVersion to v$newVersion');
+    
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS reservations(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          event_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          reservation_date TEXT NOT NULL,
+          number_of_people INTEGER NOT NULL,
+          status TEXT DEFAULT 'pending',
+          notes TEXT,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      ''');
+      developer.log('✅ Reservations table created');
+    }
   }
 
   // CRUD Operations
@@ -187,5 +224,133 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'eventify.db');
     print('📍 CHEMIN DE LA BASE: $path');
     return path;
+  }
+
+  // ==================== RESERVATIONS CRUD ====================
+
+  // Créer une réservation
+  Future<int> createReservation(Reservation reservation) async {
+    final db = await database;
+    developer.log('➕ Creating reservation for event ${reservation.event_id}');
+    return await db.insert('reservations', reservation.toMap());
+  }
+
+  // Obtenir toutes les réservations
+  Future<List<Reservation>> getAllReservations() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('reservations');
+    developer.log('📋 Retrieved ${maps.length} reservations');
+    return List.generate(maps.length, (i) => Reservation.fromMap(maps[i]));
+  }
+
+  // Obtenir les réservations d'un utilisateur
+  Future<List<Reservation>> getUserReservations(int userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reservations',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'reservation_date DESC',
+    );
+    developer.log('📋 Retrieved ${maps.length} reservations for user $userId');
+    return List.generate(maps.length, (i) => Reservation.fromMap(maps[i]));
+  }
+
+  // Obtenir les réservations d'un événement
+  Future<List<Reservation>> getEventReservations(int eventId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reservations',
+      where: 'event_id = ?',
+      whereArgs: [eventId],
+    );
+    developer.log('📋 Retrieved ${maps.length} reservations for event $eventId');
+    return List.generate(maps.length, (i) => Reservation.fromMap(maps[i]));
+  }
+
+  // Obtenir une réservation par ID
+  Future<Reservation?> getReservationById(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reservations',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    
+    if (maps.isEmpty) {
+      developer.log('❌ No reservation found with id: $id');
+      return null;
+    }
+    
+    developer.log('✅ Reservation found: $id');
+    return Reservation.fromMap(maps.first);
+  }
+
+  // Mettre à jour une réservation
+  Future<int> updateReservation(Reservation reservation) async {
+    final db = await database;
+    developer.log('🔄 Updating reservation ${reservation.id}');
+    return await db.update(
+      'reservations',
+      reservation.toMap(),
+      where: 'id = ?',
+      whereArgs: [reservation.id],
+    );
+  }
+
+  // Supprimer une réservation
+  Future<int> deleteReservation(int id) async {
+    final db = await database;
+    developer.log('🗑️ Deleting reservation $id');
+    return await db.delete(
+      'reservations',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Mettre à jour le statut d'une réservation
+  Future<int> updateReservationStatus(int id, String status) async {
+    final db = await database;
+    developer.log('🔄 Updating reservation $id status to $status');
+    return await db.update(
+      'reservations',
+      {'status': status},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Compter les réservations par statut pour un utilisateur
+  Future<Map<String, int>> getUserReservationStats(int userId) async {
+    final db = await database;
+    final pending = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM reservations WHERE user_id = ? AND status = ?',
+        [userId, 'pending'],
+      ),
+    ) ?? 0;
+
+    final confirmed = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM reservations WHERE user_id = ? AND status = ?',
+        [userId, 'confirmed'],
+      ),
+    ) ?? 0;
+
+    final cancelled = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(*) FROM reservations WHERE user_id = ? AND status = ?',
+        [userId, 'cancelled'],
+      ),
+    ) ?? 0;
+
+    return {
+      'pending': pending,
+      'confirmed': confirmed,
+      'cancelled': cancelled,
+      'total': pending + confirmed + cancelled,
+    };
   }
 }
