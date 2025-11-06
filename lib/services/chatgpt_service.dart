@@ -16,7 +16,7 @@ import 'package:http/http.dart' as http;
 /// 💭 Analyze sentiment of complaints
 class ChatGPTService {
   // TODO: Replace with your actual API key from https://platform.openai.com/api-keys
-  static const String _apiKey = 'YOUR_OPENAI_API_KEY_HERE';
+  static const String _apiKey = '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';
   static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-3.5-turbo'; // or 'gpt-4' for better quality
 
