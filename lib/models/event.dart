@@ -1,4 +1,3 @@
-// lib/models/event.dart
 class Event {
   final int id;
   final String title;
@@ -10,9 +9,9 @@ class Event {
   final double? longitude;
   final List<int> participants;
   final int createdBy;
-  final DateTime createdAt; // 11 champs au total
-  final int maxParticipants; // NOUVEAU CHAMP
-
+  final DateTime createdAt;
+  final int maxParticipants;
+  final double price; // ✅ NOUVEAU CHAMP
 
   Event({
     required this.id,
@@ -26,7 +25,8 @@ class Event {
     required this.participants,
     required this.createdBy,
     required this.createdAt,
-    required this.maxParticipants, // AJOUTÉ
+    required this.maxParticipants,
+    required this.price, // ✅ AJOUTÉ AU CONSTRUCTEUR
   });
 
   Map<String, dynamic> toMap() {
@@ -39,10 +39,11 @@ class Event {
       'category': category,
       'latitude': latitude,
       'longitude': longitude,
-      'participants': participants.join(','), // Convertir la liste en string
+      'participants': participants.join(','),
       'createdBy': createdBy,
       'createdAt': createdAt.toIso8601String(),
-      'maxParticipants': maxParticipants, // AJOUTÉ
+      'maxParticipants': maxParticipants,
+      'price': price, // ✅ AJOUTÉ
     };
   }
 
@@ -56,14 +57,17 @@ class Event {
       category: map['category'],
       latitude: map['latitude'],
       longitude: map['longitude'],
-      participants: (map['participants'] as String).split(',').where((e) => e.isNotEmpty).map(int.parse).toList(),
+      participants: (map['participants'] as String)
+          .split(',')
+          .where((e) => e.isNotEmpty)
+          .map(int.parse)
+          .toList(),
       createdBy: map['createdBy'],
       createdAt: DateTime.parse(map['createdAt']),
       maxParticipants: map['maxParticipants'] ?? 0,
-    );
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,    );
   }
 
-  // Pour créer un nouvel événement (sans ID)
   factory Event.createNew({
     required String title,
     required DateTime date,
@@ -74,9 +78,10 @@ class Event {
     double? longitude,
     required int createdBy,
     required int maxParticipants,
+    required double price, // ✅ AJOUTÉ
   }) {
     return Event(
-      id: 0, // Sera auto-incrémenté par la base
+      id: 0,
       title: title,
       date: date,
       location: location,
@@ -84,20 +89,15 @@ class Event {
       category: category,
       latitude: latitude,
       longitude: longitude,
-      participants: [createdBy], // Le créateur est automatiquement participant
+      participants: [createdBy],
       createdBy: createdBy,
       createdAt: DateTime.now(),
       maxParticipants: maxParticipants,
+      price: price, // ✅ AJOUTÉ
     );
-
-  }
-  // Méthode utilitaire pour vérifier si l'événement est complet
-  bool get isFull {
-    return maxParticipants > 0 && participants.length >= maxParticipants;
   }
 
-  // Vérifie si un utilisateur peut participer
-  bool canParticipate(int userId) {
-    return !isFull && !participants.contains(userId);
-  }
+  bool get isFull => maxParticipants > 0 && participants.length >= maxParticipants;
+
+  bool canParticipate(int userId) => !isFull && !participants.contains(userId);
 }

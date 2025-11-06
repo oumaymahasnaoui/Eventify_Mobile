@@ -24,6 +24,8 @@ class _CreateEventPageState extends State<CreateEventPage> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _maxParticipantsController = TextEditingController(text: '0');
+  final TextEditingController _priceController = TextEditingController(text: '0');
+
 
   String _selectedCategory = EventCategories.categories.first;
   DateTime _selectedDate = DateTime.now();
@@ -151,6 +153,22 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 },
               ),
               SizedBox(height: 16),
+              TextFormField(
+                controller: _priceController,
+                decoration: InputDecoration(
+                  labelText: 'Prix de participation (€) (0 = Gratuit)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Veuillez entrer un prix';
+                  final p = double.tryParse(value);
+                  if (p == null || p < 0) return 'Veuillez entrer un prix valide';
+                  return null;
+                },
+              ),
+
+              SizedBox(height: 16),
 
 
             ],
@@ -177,7 +195,8 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
   Future<void> _saveEvent() async {
     if (_formKey.currentState!.validate()) {
-      print("🔍 DEBUG - Création événement par user ID: ${widget.currentUserId}"); // AJOUTEZ CE LOG
+      final double price = double.tryParse(_priceController.text) ?? 0.0;
+
       final newEvent = Event.createNew(
         title: _titleController.text,
         date: _selectedDate,
@@ -186,8 +205,9 @@ class _CreateEventPageState extends State<CreateEventPage> {
         category: _selectedCategory,
         latitude: _latitude,
         longitude: _longitude,
-        createdBy: widget.currentUserId, // MAINTENANT int
-        maxParticipants: int.parse(_maxParticipantsController.text)
+        createdBy: widget.currentUserId,
+        maxParticipants: int.parse(_maxParticipantsController.text),
+        price: price, // ✅ ADD THIS
       );
 
       try {
@@ -200,4 +220,5 @@ class _CreateEventPageState extends State<CreateEventPage> {
       }
     }
   }
+
 }

@@ -51,6 +51,7 @@ class EventService {
         createdBy: event.createdBy,
         createdAt: event.createdAt,
         maxParticipants:event.maxParticipants,
+        price:event.price,
 
       );
 
@@ -83,6 +84,7 @@ class EventService {
         createdBy: event.createdBy,
         createdAt: event.createdAt,
         maxParticipants:event.maxParticipants,
+        price:event.price,
       );
 
       await _databaseHelper.updateEvent(updatedEvent);

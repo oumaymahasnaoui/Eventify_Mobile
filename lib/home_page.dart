@@ -4,6 +4,10 @@ import 'modules/auth/pages/profile_page.dart';
 import 'modules/events/pages/events_home_page.dart'; // Import ajouté
 import 'modules/album/gallery.dart';
 import 'modules/reclamation/reclamation_screen.dart';
+import 'modules/reservations/pages/my_reservations_page.dart';
+import 'modules/reservations/pages/reservation_statistics_page.dart';
+import 'modules/reservations/pages/event_list_page.dart';
+
 
 class HomePage extends StatelessWidget {
   final User user;
@@ -172,11 +176,42 @@ class _QuickActionsSection extends StatelessWidget {
               },
             ),
             _buildActionCard(
-              icon: Icons.attach_money,
-              title: 'Dépenses',
+              icon: Icons.event_available,
+              title: 'Réserver un événement',
+              color: const Color(0xFFCE1126),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EventListPage(userId: user.id!),
+                  ),
+                );
+              },
+            ),
+            _buildActionCard(
+              icon: Icons.bookmark,
+              title: 'Mes réservations',
+              color: Colors.purple,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyReservationsPage(userId: user.id!),
+                  ),
+                );
+              },
+            ),
+            _buildActionCard(
+              icon: Icons.bar_chart,
+              title: 'Statistiques',
               color: Colors.orange,
               onTap: () {
-                // TODO: Navigation vers dépenses
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReservationStatisticsPage(userId: user.id!),
+                  ),
+                );
               },
             ),
           ],

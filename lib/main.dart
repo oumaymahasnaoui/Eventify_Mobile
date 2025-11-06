@@ -3,24 +3,23 @@ import 'database/database_helper.dart';
 import 'modules/auth/pages/signup_page.dart';
 
 void main() async {
+  // Required when doing async work before runApp()
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Réinitialiser la base pour corriger le schéma
-  final dbHelper = DatabaseHelper();
+  // Initialize the database (lightweight — does NOT print tables)
+  await DatabaseHelper().database;
 
-
-  // Afficher les infos de debug
-  await dbHelper.getDatabasePath();
-  await dbHelper.debugTableSchema();
-  await dbHelper.debugAllUsers();
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Eventify',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: Color(0xFFCE1126),
         colorScheme: ColorScheme.fromSwatch().copyWith(
@@ -28,11 +27,7 @@ class MyApp extends StatelessWidget {
           secondary: Color(0xFFCE1126),
         ),
       ),
-      home: SignUpPage(), // ou votre page d'accueil
+      home: SignUpPage(),
     );
   }
-  final dbHelper = DatabaseHelper();
-
-  // Afficher les infos de debug
-
 }

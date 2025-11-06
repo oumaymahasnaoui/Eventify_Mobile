@@ -29,6 +29,8 @@ class _EditEventPageState extends State<EditEventPage> {
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
   late TextEditingController _maxParticipantsController; // NOUVEAU
+  final TextEditingController _priceController = TextEditingController();
+
 
   late String _selectedCategory;
   late DateTime _selectedDate;
@@ -44,6 +46,7 @@ class _EditEventPageState extends State<EditEventPage> {
     _locationController = TextEditingController(text: widget.event.location);
     _descriptionController = TextEditingController(text: widget.event.description);
     _maxParticipantsController = TextEditingController(text: widget.event.maxParticipants.toString()); // NOUVEAU
+    _priceController.text = widget.event.price.toString();
 
     _selectedCategory = widget.event.category;
     _selectedDate = widget.event.date;
@@ -271,7 +274,7 @@ class _EditEventPageState extends State<EditEventPage> {
         );
         return;
       }
-
+      final double price = double.tryParse(_priceController.text) ?? 0.0;
       final updatedEvent = Event(
         id: widget.event.id,
         title: _titleController.text,
@@ -281,11 +284,13 @@ class _EditEventPageState extends State<EditEventPage> {
         category: _selectedCategory,
         latitude: _latitude,
         longitude: _longitude,
-        participants: widget.event.participants, // Garder les participants existants
-        createdBy: widget.event.createdBy, // Garder le créateur original
-        createdAt: widget.event.createdAt, // Garder la date de création originale
-        maxParticipants: maxParticipants, // NOUVEAU CHAMP
+        participants: widget.event.participants, // Keep existing
+        createdBy: widget.event.createdBy, // Keep original creator
+        createdAt: widget.event.createdAt, // Keep original creation date
+        maxParticipants: maxParticipants,
+        price: price, // ✅ Add price here
       );
+
 
       try {
         await _eventService.updateEvent(updatedEvent);
