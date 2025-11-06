@@ -2,6 +2,7 @@ import 'package:eventify/models/user.dart';
 import 'package:flutter/material.dart';
 import 'modules/auth/pages/profile_page.dart';
 import 'modules/events/pages/events_home_page.dart'; // Import ajouté
+import 'modules/album/gallery.dart';
 
 class HomePage extends StatelessWidget {
   final User user;
@@ -158,7 +159,10 @@ class _QuickActionsSection extends StatelessWidget {
               title: 'Albums photos',
               color: Colors.green,
               onTap: () {
-                // TODO: Navigation vers albums
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AlbumGalleryPage()),
+                );
               },
             ),
             _buildActionCard(

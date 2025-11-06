@@ -25,12 +25,12 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // Version augmentée
+      version: 4, // Version augmentée pour les tables album
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
   }
-  // AJOUTEZ cette méthode dans DatabaseHelper
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     developer.log('🔄 Upgrading database from $oldVersion to $newVersion');
 
@@ -41,6 +41,53 @@ class DatabaseHelper {
         developer.log('✅ Added maxParticipants column to events table');
       } catch (e) {
         developer.log('ℹ️ Column maxParticipants might already exist: $e');
+      }
+    }
+
+    if (oldVersion < 3) {
+      // Créer les tables pour le module album
+      try {
+        // Create photos table for album module
+        await db.execute('''
+        CREATE TABLE photos(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          url TEXT NOT NULL,
+          legend TEXT,
+          user TEXT,
+          likes INTEGER DEFAULT 0,
+          comments INTEGER DEFAULT 0,
+          createdAt TEXT,
+          event_id INTEGER
+        )
+        ''');
+        developer.log('✅ Table photos created successfully');
+
+        // Photo likes table to track which user liked which photo (for toggling)
+        await db.execute('''
+        CREATE TABLE IF NOT EXISTS photo_likes(
+          photo_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          PRIMARY KEY (photo_id, user_id),
+          FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        ''');
+        developer.log('✅ Table photo_likes created successfully');
+
+        // Comments table
+        await db.execute('''
+        CREATE TABLE IF NOT EXISTS comments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          photoId INTEGER NOT NULL,
+          user TEXT,
+          text TEXT NOT NULL,
+          createdAt TEXT
+        )
+        ''');
+        developer.log('✅ Table comments created successfully');
+      } catch (e) {
+        developer.log('❌ Error creating album tables: $e');
+        rethrow;
       }
     }
   }
@@ -87,6 +134,45 @@ class DatabaseHelper {
     ''');
 
     developer.log('✅ Table events created successfully');
+
+    // Create photos table for album module
+    await db.execute('''
+    CREATE TABLE IF NOT EXISTS photos(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      url TEXT NOT NULL,
+      legend TEXT,
+      user TEXT,
+      likes INTEGER DEFAULT 0,
+      comments INTEGER DEFAULT 0,
+      createdAt TEXT,
+      event_id INTEGER
+    )
+    ''');
+    developer.log('✅ Table photos created successfully');
+
+    // Photo likes table to track which user liked which photo (for toggling)
+    await db.execute('''
+    CREATE TABLE IF NOT EXISTS photo_likes(
+      photo_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      PRIMARY KEY (photo_id, user_id),
+      FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+    ''');
+    developer.log('✅ Table photo_likes created successfully');
+
+    // Comments table
+    await db.execute('''
+    CREATE TABLE IF NOT EXISTS comments(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      photoId INTEGER NOT NULL,
+      user TEXT,
+      text TEXT NOT NULL,
+      createdAt TEXT
+    )
+    ''');
+    developer.log('✅ Table comments created successfully');
 
     // Insérer un utilisateur de test
     await _insertTestUser(db);
@@ -268,6 +354,214 @@ class DatabaseHelper {
     );
   }
 
+  // ============ ALBUM MODULE OPERATIONS ============
+
+  // --- Photos CRUD ---
+  Future<int> insertPhoto(Map<String, dynamic> photo) async {
+    final db = await database;
+    developer.log('➕ Inserting photo for event: ${photo['event_id']}');
+    return await db.insert('photos', photo);
+  }
+
+  Future<List<Map<String, dynamic>>> getPhotosByEventId(int eventId) async {
+    final db = await database;
+    return await db.query('photos',
+        where: 'event_id = ?',
+        whereArgs: [eventId],
+        orderBy: 'createdAt DESC'
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPhotos() async {
+    final db = await database;
+    return await db.query('photos', orderBy: 'createdAt DESC');
+  }
+
+// In DatabaseHelper class - CORRECTED VERSION
+  Future<int> updatePhoto(int photoId, Map<String, dynamic> photoData) async {
+    final db = await database;
+    return await db.update(
+      'photos',
+      photoData,
+      where: 'id = ?',
+      whereArgs: [photoId],
+    );
+  }
+
+
+  Future<Map<String, dynamic>?> getEventById(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'events',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return maps.first;
+    }
+    return null;
+  }
+  Future<void> unlikePhoto(int photoId, int userId) async {
+    final db = await database;
+    developer.log('➖ Unliking photo $photoId for user $userId');
+    try {
+      final deleted = await db.delete('photo_likes', where: 'photo_id = ? AND user_id = ?', whereArgs: [photoId, userId]);
+      developer.log('✅ Deleted $deleted photo_likes rows for $photoId/$userId');
+    } catch (e) {
+      developer.log('🔴 Failed to delete photo_likes for $photoId/$userId: $e');
+      rethrow;
+    }
+
+    try {
+      final res = await db.rawUpdate('UPDATE photos SET likes = (SELECT COUNT(*) FROM photo_likes WHERE photo_id = ?) WHERE id = ?', [photoId, photoId]);
+      developer.log('🔁 Updated photos.likes for photo $photoId (rawUpdate result: $res)');
+    } catch (e) {
+      developer.log('🔴 Failed to update photos.likes for $photoId: $e');
+      rethrow;
+    }
+  }
+
+
+  Future<void> likePhoto(int photoId, int userId) async {
+    final db = await database;
+    developer.log('➕ Liking photo $photoId for user $userId');
+    try {
+      await db.insert('photo_likes', {'photo_id': photoId, 'user_id': userId});
+      developer.log('✅ Inserted photo_likes row for photo $photoId / user $userId');
+    } catch (e) {
+      // If it's a unique constraint violation, bubble up so caller can decide
+      developer.log('🔴 Failed to insert photo_likes for $photoId/$userId: $e');
+      rethrow;
+    }
+
+    try {
+      final res = await db.rawUpdate('UPDATE photos SET likes = (SELECT COUNT(*) FROM photo_likes WHERE photo_id = ?) WHERE id = ?', [photoId, photoId]);
+      developer.log('🔁 Updated photos.likes for photo $photoId (rawUpdate result: $res)');
+    } catch (e) {
+      developer.log('🔴 Failed to update photos.likes for $photoId: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPhotosRaw({int? eventId}) async {
+    final db = await database;
+    if (eventId != null) {
+      return await db.query('photos',
+          where: 'event_id = ?',
+          whereArgs: [eventId],
+          orderBy: 'createdAt DESC'
+      );
+    }
+    return await db.query('photos', orderBy: 'createdAt DESC');
+  }
+  // --- Photo likes helpers ---
+  Future<List<int>> getLikedPhotoIdsForUser(int userId) async {
+    final db = await database;
+    try {
+      developer.log('🔍 Fetching liked photo ids for user $userId');
+      final rows = await db.query('photo_likes', where: 'user_id = ?', whereArgs: [userId]);
+      final ids = rows.map<int>((r) => r['photo_id'] as int).toList();
+      developer.log('✅ Found liked photo ids: $ids');
+      return ids;
+    } catch (e) {
+      developer.log('🔴 Failed to fetch liked ids for user $userId: $e');
+      rethrow;
+    }
+  }
+  Future<int> updateComment(int id, Map<String, dynamic> values) async {
+    final db = await database;
+    return await db.update('comments', values, where: 'id = ?', whereArgs: [id]);
+  }
+
+
+  Future<Map<String, dynamic>?> getPhotoById(int id) async {
+    final db = await database;
+    final rows = await db.query('photos', where: 'id = ?', whereArgs: [id]);
+    return rows.isNotEmpty ? rows.first : null;
+  }
+
+  Future<int> deletePhoto(int photoId) async {
+    final db = await database;
+    return await db.delete('photos', where: 'id = ?', whereArgs: [photoId]);
+  }
+
+  // --- Photo Likes Management ---
+  Future<bool> togglePhotoLike(int photoId, int userId) async {
+    final db = await database;
+
+    // Check if like exists
+    final existingLikes = await db.query(
+      'photo_likes',
+      where: 'photo_id = ? AND user_id = ?',
+      whereArgs: [photoId, userId],
+    );
+
+    if (existingLikes.isEmpty) {
+      // Add like
+      await db.insert('photo_likes', {
+        'photo_id': photoId,
+        'user_id': userId,
+      });
+      await db.rawUpdate('UPDATE photos SET likes = likes + 1 WHERE id = ?', [photoId]);
+      developer.log('✅ Like added for photo $photoId by user $userId');
+      return true;
+    } else {
+      // Remove like
+      await db.delete(
+        'photo_likes',
+        where: 'photo_id = ? AND user_id = ?',
+        whereArgs: [photoId, userId],
+      );
+      await db.rawUpdate('UPDATE photos SET likes = likes - 1 WHERE id = ?', [photoId]);
+      developer.log('✅ Like removed for photo $photoId by user $userId');
+      return false;
+    }
+  }
+
+  Future<bool> isPhotoLikedByUser(int photoId, int userId) async {
+    final db = await database;
+    final likes = await db.query(
+      'photo_likes',
+      where: 'photo_id = ? AND user_id = ?',
+      whereArgs: [photoId, userId],
+    );
+    return likes.isNotEmpty;
+  }
+
+  Future<int> getPhotoLikesCount(int photoId) async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT likes FROM photos WHERE id = ?', [photoId]);
+    return result.isNotEmpty ? result.first['likes'] as int : 0;
+  }
+
+  // --- Comments CRUD ---
+  Future<int> insertComment(Map<String, dynamic> comment) async {
+    final db = await database;
+    final id = await db.insert('comments', comment);
+
+    // Update photo comment count
+    final int photoId = comment['photoId'] as int;
+    await db.rawUpdate('UPDATE photos SET comments = (SELECT COUNT(*) FROM comments WHERE photoId = ?) WHERE id = ?', [photoId, photoId]);
+
+    return id;
+  }
+
+  Future<List<Map<String, dynamic>>> getCommentsByPhotoId(int photoId) async {
+    final db = await database;
+    return await db.query('comments', where: 'photoId = ?', whereArgs: [photoId], orderBy: 'createdAt DESC');
+  }
+
+  Future<int> deleteComment(int id) async {
+    final db = await database;
+    // Optionally update photo comments count after deletion
+    final rows = await db.query('comments', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return 0;
+    final photoId = rows.first['photoId'] as int;
+    final res = await db.delete('comments', where: 'id = ?', whereArgs: [id]);
+    await db.rawUpdate('UPDATE photos SET comments = (SELECT COUNT(*) FROM comments WHERE photoId = ?) WHERE id = ?', [photoId, photoId]);
+    return res;
+  }
+
   // ============ UTILITY METHODS ============
 
   Future<void> resetDatabase() async {
@@ -286,6 +580,7 @@ class DatabaseHelper {
   }
 
   Future exportDatabaseToFile() async {}
+
   // 📊 Méthode pour afficher le schéma de la table
   Future<void> debugTableSchema() async {
     final db = await database;
@@ -295,9 +590,9 @@ class DatabaseHelper {
       print('  ${column['name']} - ${column['type']}');
     }
   }
+
   // ============ DEBUG METHODS ============
 
-// Ajoutez cette méthode dans la classe DatabaseHelper
   Future<List<User>> getUsersByIds(List<int> userIds) async {
     final db = await database;
 
@@ -326,7 +621,6 @@ class DatabaseHelper {
     }
   }
 
-
   Future<void> debugAllUsers() async {
     try {
       final db = await database;
@@ -351,9 +645,24 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> debugAllPhotos() async {
+    final db = await database;
+    final photos = await db.query('photos');
+    print('📸 PHOTOS DANS LA BASE:');
+    for (final photo in photos) {
+      print('  $photo');
+    }
+  }
+
   Future<String> getDatabasePath() async {
     final path = join(await getDatabasesPath(), 'eventify.db');
     print('📍 CHEMIN DE LA BASE: $path');
     return path;
+  }
+
+  /********** Syrine Related ************/
+  Future<List<Map<String, dynamic>>> getAllEvents() async {
+    final db = await database;
+    return await db.query('events', orderBy: 'date DESC');
   }
 }

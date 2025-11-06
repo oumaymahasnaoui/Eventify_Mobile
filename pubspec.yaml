@@ -38,7 +38,11 @@ dependencies:
   path_provider: ^2.1.1  # Ajoutez cette ligne
   google_maps_flutter: ^2.2.3
   geolocator: ^9.0.2
-  http: ^0.13.5
+  image_picker: ^0.8.7+5
+  image: ^3.3.0 # For image processing
+  photofilters: ^3.0.1 # For predefined filters
+  flutter_cache_manager: ^3.4.1 # For caching filtered images
+  http: ^1.2.2
 
 
   # The following adds the Cupertino Icons font to your application.
