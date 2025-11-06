@@ -3,8 +3,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:developer' as developer;
+import '../models/reclamation.dart';
 import '../models/user.dart';
 import '../models/event.dart';
+
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -25,7 +27,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4, // Version augmentée pour les tables album
+      version: 8, // Version augmentée pour les tables album
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -44,9 +46,33 @@ class DatabaseHelper {
       }
     }
 
+    if (oldVersion < 9) { // or whatever your current version is
+      try {
+        await db.execute('''
+        CREATE TABLE IF NOT EXISTS reclamations(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          imagePath TEXT,
+          createdAt TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          userId INTEGER,
+          reponseAdmin TEXT,
+          FOREIGN KEY (userId) REFERENCES users (id)
+        )
+      ''');
+        developer.log('✅ Reclamations table created during upgrade');
+      } catch (e) {
+        developer.log('❌ Error creating reclamations table: $e');
+      }
+    }
+
     if (oldVersion < 3) {
       // Créer les tables pour le module album
       try {
+
+
+
         // Create photos table for album module
         await db.execute('''
         CREATE TABLE photos(
@@ -62,7 +88,9 @@ class DatabaseHelper {
         ''');
         developer.log('✅ Table photos created successfully');
 
-        // Photo likes table to track which user liked which photo (for toggling)
+
+
+
         await db.execute('''
         CREATE TABLE IF NOT EXISTS photo_likes(
           photo_id INTEGER NOT NULL,
@@ -114,6 +142,24 @@ class DatabaseHelper {
 
     developer.log('✅ Table users created successfully');
 
+    // Create reclamations table
+    await db.execute('''
+      CREATE TABLE reclamations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        imagePath TEXT,
+        createdAt TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        userId INTEGER,
+        reponseAdmin TEXT,
+        FOREIGN KEY (userId) REFERENCES users (id)
+      )
+    ''');
+
+    developer.log('✅ Table reclamations created successfully');
+
+    // Photo likes table to track which user liked which photo (for toggling)
     // Table events
     await db.execute('''
       CREATE TABLE IF NOT EXISTS events(
@@ -664,5 +710,133 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAllEvents() async {
     final db = await database;
     return await db.query('events', orderBy: 'date DESC');
+  }
+
+
+  // ==================== RECLAMATIONS CRUD ====================
+
+  /// Insert a new reclamation
+  Future<int> insertReclamation(Reclamation reclamation) async {
+    final db = await database;
+    developer.log('➕ Inserting reclamation: ${reclamation.title}');
+    return await db.insert('reclamations', reclamation.toMap());
+  }
+
+  /// Get a reclamation by ID
+  Future<Reclamation?> getReclamationById(int id) async {
+    final db = await database;
+    developer.log('🔍 Searching reclamation by ID: $id');
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reclamations',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return Reclamation.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  /// Get all reclamations
+  Future<List<Reclamation>> getAllReclamations() async {
+    final db = await database;
+    developer.log('📋 Getting all reclamations');
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reclamations',
+      orderBy: 'createdAt DESC',
+    );
+
+    return List.generate(maps.length, (i) => Reclamation.fromMap(maps[i]));
+  }
+
+  /// Get reclamations by status
+  Future<List<Reclamation>> getReclamationsByStatus(String status) async {
+    final db = await database;
+    developer.log('📋 Getting reclamations with status: $status');
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reclamations',
+      where: 'status = ?',
+      whereArgs: [status],
+      orderBy: 'createdAt DESC',
+    );
+
+    return List.generate(maps.length, (i) => Reclamation.fromMap(maps[i]));
+  }
+
+  /// Get reclamations by user
+  Future<List<Reclamation>> getReclamationsByUserId(int userId) async {
+    final db = await database;
+    developer.log('📋 Getting reclamations for user: $userId');
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'reclamations',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      orderBy: 'createdAt DESC',
+    );
+
+    return List.generate(maps.length, (i) => Reclamation.fromMap(maps[i]));
+  }
+
+  /// Update a reclamation
+  Future<int> updateReclamation(Reclamation reclamation) async {
+    final db = await database;
+    developer.log('✏️ Updating reclamation: ${reclamation.id} - ${reclamation.title}');
+
+    return await db.update(
+      'reclamations',
+      reclamation.toMap(),
+      where: 'id = ?',
+      whereArgs: [reclamation.id],
+    );
+  }
+
+  /// Update only the status of a reclamation
+  Future<int> updateReclamationStatus(int id, String newStatus) async {
+    final db = await database;
+    developer.log('🔄 Updating reclamation status: $id -> $newStatus');
+
+    return await db.update(
+      'reclamations',
+      {'status': newStatus},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Delete a reclamation
+  Future<int> deleteReclamation(int id) async {
+    final db = await database;
+    developer.log('🗑️ Deleting reclamation: $id');
+
+    return await db.delete(
+      'reclamations',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Get count of reclamations by status
+  Future<int> getReclamationsCountByStatus(String status) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM reclamations WHERE status = ?',
+      [status],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// Debug: Display all reclamations
+  Future<void> debugAllReclamations() async {
+    final db = await database;
+    final reclamations = await db.query('reclamations');
+    print('📋 RÉCLAMATIONS DANS LA BASE:');
+    for (final reclamation in reclamations) {
+      print('  $reclamation');
+    }
   }
 }

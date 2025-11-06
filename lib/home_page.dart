@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'modules/auth/pages/profile_page.dart';
 import 'modules/events/pages/events_home_page.dart'; // Import ajouté
 import 'modules/album/gallery.dart';
+import 'modules/reclamation/reclamation_screen.dart';
 
 class HomePage extends StatelessWidget {
   final User user;
@@ -147,11 +148,16 @@ class _QuickActionsSection extends StatelessWidget {
               },
             ),
             _buildActionCard(
-              icon: Icons.group,
-              title: 'Mes groupes',
-              color: Colors.blue,
+              icon: Icons.report_problem_outlined,
+              title: 'Réclamations',
+              color: const Color(0xFFE74C3C),
               onTap: () {
-                // TODO: Navigation vers groupes
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReclamationScreen(),
+                  ),
+                );
               },
             ),
             _buildActionCard(
